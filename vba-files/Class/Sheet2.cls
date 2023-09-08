@@ -144,12 +144,7 @@ Erase attaker(), defender(), exchanger()
 End Sub
 '战斗过程
 Sub roundcheck(a(), b())
-    Dim x As Variant
-    Dim y As Variant
-    x = a(0)
-    y = b(0)
-    Cells(1, 14) = x
-    Cells(2, 14) = y
+  
 End Sub
 '死亡检定
 Function isdeath(hp As Variant) As Boolean

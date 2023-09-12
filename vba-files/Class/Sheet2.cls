@@ -65,87 +65,89 @@ characterB(17) = 0
 ' 吸血  15
 ' 吸血抵抗  16
 ' 击晕标记 17
-Dim damlog As String
-Dim rhp As Single
+Dim damlog As String, deflog As String
+Dim rhp As Single, dam As Single
 Dim j As Integer
 j = 6
 
 '====战斗过程=====
-Sheets("battle").Range("N:N").Clear
+
+Sheets("battle").Range("m:N").Clear
 '根据敏捷确定出手权,定义攻防角色
 If characterA(4) > characterB(4) Then
   
     attaker = characterA()
     defender = characterB()
-    Cells(5, 14) = "A速度大于B,A优先行动"
+    Cells(5, 13) = "A速度大于B,A优先行动"
     
 Else
     attaker = characterB()
     defender = characterA()
-    Cells(5, 14) = "A速度不大于B,B优先行动"
+    Cells(5, 13) = "A速度不大于B,B优先行动"
 End If
 rhp = defender(2)
 For i = 1 To 16
     '超过规定回合双方都没死
-    If i = 16 And rhp > 0 Then
-        Cells(autorow(j), 14) = "---------战斗结束--------"
-        Cells(autorow(j), 14) = "A在15回合内未击败B,B获胜"
+    If i = 16 Then
+        Cells(autorow(j), 13) = "---------战斗结束--------"
+        Cells(autorow(j), 13) = "A在15回合内未击败B,B获胜"
         '回合进行
-    ElseIf rhp > 0 Then '一方死亡结束
-        Cells(autorow(j), 14) = "---------第" & i & "回合--------"
-      
-        For e = 1 To 2
-            rhp = defender(2)
-            dam = damage(attaker(1), defender(3))
-            If attribution(attaker(9), defender(10)) = True Then '暴击检定
-                dam = dam * 2
-                damlog = dam & "(暴击!)"
+    Else
+            Cells(autorow(j), 13) = "-------------第" & i & "回合-------------"
+            ' If defender(17) > 0 Then
+            '     defender(17) = defender(17) - 1 '防守方回合移除晕眩,value:0
+            ' End If
+            For e = 1 To 2
+            If rhp = 0 Then '一方死亡结束
+                Exit For
+            End If
+            If attaker(17) > 0 Then '攻方被击晕则跳过攻方回合
+                Cells(autorow(j), 14) = attaker(0) & "(晕眩),无法行动"
+                attaker(17) = attaker(17) - 1 '晕眩状态,value:1
             Else
-                damlog = dam
+                If defender(17) = 0 And ismiss(defender(11), attaker(12)) = True Then '闪避检定
+                    Cells(autorow(j), 14) = attaker(0) & "<攻击>" & defender(0) & "<闪避>"
+                Else
+                    If defender(17) > 0 Then
+                        defender(17) = defender(17) - 1 '防守方回合移除晕眩,value:0
+                    End If
+                    rhp = defender(2)
+                    dam = damage(attaker(1), defender(3))
+                    damlog = "造成" & dam
+                    deflog = "<攻击>" & defender(0)
+                    If attribution(attaker(13), defender(14)) = True Then '击晕检定
+                        defender(17) = 2 '附加晕眩效果,value:2
+                        deflog = "<击晕>" & defender(0)
+                    End If
+                    If attribution(attaker(9), defender(10)) = True Then '暴击检定
+                        dam = dam * 2
+                        damlog = dam & "(暴击!)"
+                    End If
+                        rhp = hp(dam, rhp)
+                    Cells(autorow(j), 14) = attaker(0) & deflog & damlog & "伤害," & defender(0) & "剩余血量为:" & rhp & " "
+                End If
             End If
-            rhp = rhp - dam
-            If rhp <= 0 Then
-                rhp = 0
-            End If
-            If isdizzy(attaker(17)) = True Then '攻方被击晕则跳过攻方回合
-            Cells(autorow(j), 14) = attaker(0) & "(晕眩),无法行动"
-            attaker(17) = attaker(17) - 1 '晕眩状态,value:1
-        ElseIf attribution(attaker(13), defender(14)) = True Then '击晕检定
-            defender(17) = 2 '附加晕眩效果,value:2
-            Cells(autorow(j), 14) = attaker(0) & "对" & defender(0) & "造成" & damlog & "伤害," & defender(0) & "的剩余血量为:" & rhp & " " & defender(0) & "被击晕"
-        ElseIf defender(17) = 0 And attribution(defender(11), attaker(12)) = True Then '闪避检定
-            Cells(autorow(j), 14) = attaker(0) & "对" & defender(0) & "发起攻击, " & defender(0) & "闪避"
-        ElseIf rhp = 0 Then
-            Cells(autorow(j), 14) = attaker(0) & "对" & defender(0) & "造成" & damlog & "伤害" & defender(0) & "的剩余血量为:0"
-            Exit For
-        Else
-            If defender(17) > 0 Then
-                defender(17) = defender(17) - 1 '防守方回合移除晕眩,value:0
-            End If
-            Cells(autorow(j), 14) = attaker(0) & "对" & defender(0) & "造成" & damlog & "伤害," & defender(0) & "的剩余血量为:" & rhp
-        End If
-            defender(2) = rhp '防守方血量更新
+            defender(2) = rhp  '防守方血量更新
             '攻防换边
             exchanger = attaker()
             attaker = defender()
             defender = exchanger()
             ReDim exchanger(17)
+
         Next
-    Else
-        Cells(autorow(j), 14) = death(attaker(2), defender(2))
-        Cells(autorow(j), 14) = "---------战斗结束--------"
-        Exit For
+        If isdeath(attaker(2)) = True Or isdeath(defender(2)) = True Then   '一方死亡结束
+            Cells(autorow(j), 14) = death(attaker(), defender())
+            Cells(autorow(j), 13) = "---------战斗结束--------"
+            Exit For
+        End If
+
     End If
 Next
+End Sub
+'攻击流程
+Function atkloop(a(), d())
 
-roundcheck attaker(), defender()
-Erase characterA(), characterB()
-Erase attaker(), defender(), exchanger()
-End Sub
-'战斗过程
-Sub roundcheck(a(), b())
-  
-End Sub
+End Function
 '死亡检定
 Function isdeath(hp As Variant) As Boolean
     If hp = 0 Then
@@ -212,20 +214,20 @@ Function damage(atk As Variant, def As Variant) As Single
     End If
 End Function
 '战斗过程-返回防守方血量
-Function battleround(damg As Variant, rhpdef As Single) As Single
+Function hp(damg As Single, rhpdef As Single) As Single
     rhpdef = rhpdef - damg
     If rhpdef <= 0 Then
-        battleround = 0
+        hp = 0
     Else
-        battleround = rhpdef
+        hp = rhpdef
     End If
 End Function
 '是否结束战斗
-Function death(a As Variant, b As Variant) As String
-    If a = 0 Then
-        death = "A死亡"
-    ElseIf b = 0 Then
-        death = "B死亡"
+Function death(a(), b()) As String
+    If a(2) = 0 Then
+        death = a(0) & "死亡"
+    ElseIf b(2) = 0 Then
+        death = b(0) & "死亡"
     End If
 End Function
 '高级属性检定

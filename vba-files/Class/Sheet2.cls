@@ -115,19 +115,36 @@ For i = 1 To 16
                     dam = damage(attaker(1), defender(3))
                     damlog = "造成" & dam
                     deflog = "<攻击>" & defender(0)
+                    If attribution(attaker(9), defender(10)) = True Then '暴击检定
+                    dam = dam * 2
+                    damlog = "造成" & dam & "(暴击!)"
+                    End If
                     If attribution(attaker(13), defender(14)) = True Then '击晕检定
                         defender(17) = 2 '附加晕眩效果,value:2
                         deflog = "<击晕>" & defender(0)
                     End If
-                    If attribution(attaker(9), defender(10)) = True Then '暴击检定
-                        dam = dam * 2
-                        damlog = dam & "(暴击!)"
-                    End If
                         rhp = hp(dam, rhp)
                     Cells(autorow(j), 14) = attaker(0) & deflog & damlog & "伤害," & defender(0) & "剩余血量为:" & rhp & " "
+                    defender(2) = rhp  '防守方血量更新
+                    if defender(2)>0 and attribution(defender(7), attaker(8))=true then '反击检定前提为防守方存活
+                        rhp = attaker(2)
+                        dam = damage(defender(1), attaker(3))
+                        damlog = "造成" & dam
+                        deflog = "<反击>" & attaker(0)
+                        If attribution(defender(9), attaker(10)) = True Then '反击暴击检定
+                        dam = dam * 2
+                        damlog = "造成" & dam & "(暴击!)"
+                        End If
+                        rhp = hp(dam, rhp)
+                        Cells(autorow(j), 14) = defender(0) & deflog & damlog & "伤害," & attaker(0) & "剩余血量为:" & rhp & " "
+                        attaker(2)=rhp
+                        If rhp = 0 Then '一方死亡结束
+                        Exit For
+                        End If
+                    end if
                 End If
             End If
-            defender(2) = rhp  '防守方血量更新
+            rhp= defender(2)'血量参数更新为防守方,用于循环判断标记
             '攻防换边
             exchanger = attaker()
             attaker = defender()

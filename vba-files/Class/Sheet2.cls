@@ -98,72 +98,91 @@ For i = 1 To 16
             '     defender(17) = defender(17) - 1 '防守方回合移除晕眩,value:0
             ' End If
             For e = 1 To 2
-            If rhp = 0 Then '一方死亡结束
-                Exit For
-            End If
-            If attaker(17) > 0 Then '攻方被击晕则跳过攻方回合
-                Cells(autorow(j), 14) = attaker(0) & "(晕眩),无法行动"
-                attaker(17) = attaker(17) - 1 '晕眩状态,value:1
-            Else
-                If defender(17) = 0 And ismiss(defender(11), attaker(12)) = True Then '闪避检定
-                    Cells(autorow(j), 14) = attaker(0) & "<攻击>" & defender(0) & "<闪避>"
-                Else
-                    If defender(17) > 0 Then
-                        defender(17) = defender(17) - 1 '防守方回合移除晕眩,value:0
-                    End If
-                    rhp = defender(2)
-                    dam = damage(attaker(1), defender(3))
-                    damlog = "造成" & dam
-                    deflog = "<攻击>" & defender(0)
-                    If attribution(attaker(9), defender(10)) = True Then '暴击检定
-                    dam = dam * 2
-                    damlog = "造成" & dam & "(暴击!)"
-                    End If
-                    If attribution(attaker(13), defender(14)) = True Then '击晕检定
-                        defender(17) = 2 '附加晕眩效果,value:2
-                        deflog = "<击晕>" & defender(0)
-                    End If
-                        rhp = hp(dam, rhp)
-                    Cells(autorow(j), 14) = attaker(0) & deflog & damlog & "伤害," & defender(0) & "剩余血量为:" & rhp & " "
-                    defender(2) = rhp  '防守方血量更新
-                    if defender(2)>0 and attribution(defender(7), attaker(8))=true then '反击检定前提为防守方存活
-                        rhp = attaker(2)
-                        dam = damage(defender(1), attaker(3))
-                        damlog = "造成" & dam
-                        deflog = "<反击>" & attaker(0)
-                        If attribution(defender(9), attaker(10)) = True Then '反击暴击检定
-                        dam = dam * 2
-                        damlog = "造成" & dam & "(暴击!)"
-                        End If
-                        rhp = hp(dam, rhp)
-                        Cells(autorow(j), 14) = defender(0) & deflog & damlog & "伤害," & attaker(0) & "剩余血量为:" & rhp & " "
-                        attaker(2)=rhp
-                        If rhp = 0 Then '一方死亡结束
-                        Exit For
-                        End If
-                    end if
+                If attaker(2)=0 or defender(2)=0 Then '一方死亡结束
+                    Exit For
                 End If
-            End If
-            rhp= defender(2)'血量参数更新为防守方,用于循环判断标记
-            '攻防换边
-            exchanger = attaker()
-            attaker = defender()
-            defender = exchanger()
-            ReDim exchanger(17)
-
-        Next
+                If attaker(17) > 0 Then '攻方被击晕则跳过攻方回合
+                    Cells(autorow(j), 14) = attaker(0) & "(晕眩),无法行动"
+                    attaker(17) = attaker(17) - 1 '晕眩状态,value:1
+                Else
+                    Dim combofinal As Variant
+                    combofinal = iscombo(attaker(5), defender(6), 0) + 1 '首次攻击不算连击,故计数器+1
+                    Dim combo As Variant
+                    For combo = 1 To combofinal '定义连击计数器
+                        If attaker(2)=0 or defender(2)=0 Then '一方死亡结束
+                            Exit For
+                        End If
+                        If defender(17) = 0 And ismiss(defender(11), attaker(12)) = True Then '闪避检定
+                            Cells(autorow(j), 14) = attaker(0) & log(combo, 0) & defender(0) & "<闪避>"
+                        Else
+                            If combo > 1 and defender(17) > 0 Then '防守方反击时晕眩状态不更新
+                                defender(17) = defender(17) - 1 '防守方回合移除晕眩,value:0
+                            End If
+                            rhp = defender(2)
+                            dam = damage(attaker(1), defender(3))
+                            damlog = "造成" & dam
+                            deflog = log(combo, defender(17)) & defender(0)
+                            If attribution(attaker(9), defender(10)) = True Then '暴击检定
+                                dam = dam * 2
+                                damlog = "造成" & dam & "(暴击!)"
+                            End If
+                            If defender(17) = 2 And attribution(attaker(13), defender(14)) = True Then '击晕检定,防守方=2视为防守方反击不检定击晕
+                                defender(17) = 2 '附加晕眩效果,value:2
+                                deflog = log(combo, defender(17)) & defender(0)
+                            End If
+                            rhp = hp(dam, rhp)
+                            Cells(autorow(j), 14) = attaker(0) & deflog & damlog & "伤害," & defender(0) & "剩余血量为:" & rhp & " "
+                            defender(2) = rhp  '防守方血量更新
+                            If  defender(17)=0 and defender(2) > 0 And attribution(defender(7), attaker(8)) = True Then '反击检定前提为1.防守方存活且2.防守方不晕眩
+                                rhp = attaker(2)
+                                dam = damage(defender(1), attaker(3))
+                                damlog = "造成" & dam
+                                deflog = "<反击>" & attaker(0)
+                                If attribution(defender(9), attaker(10)) = True Then '反击暴击检定
+                                    dam = dam * 2
+                                    damlog = "造成" & dam & "(暴击!)"
+                                End If
+                                rhp = hp(dam, rhp)
+                                Cells(autorow(j), 14) = defender(0) & deflog & damlog & "伤害," & attaker(0) & "剩余血量为:" & rhp & " "
+                                If combo>1 Then'连击计数器大于1反击才会中断连击
+                                    Cells(autorow(j), 14) = attaker(0) & "连击被打断!!!"
+                                    combo=999'中断连击
+                                End If                                
+                                attaker(2) = rhp
+                                If rhp = 0 Then '一方死亡结束
+                                    Exit For                               
+                                End If
+                            End If
+                        End If
+                    Next
+                End If
+                rhp = defender(2) '血量参数更新为防守方,用于循环判断标记
+                '攻防换边
+                exchanger = attaker()
+                attaker = defender()
+                defender = exchanger()
+                ReDim exchanger(17)
+            Next
         If isdeath(attaker(2)) = True Or isdeath(defender(2)) = True Then   '一方死亡结束
             Cells(autorow(j), 14) = death(attaker(), defender())
             Cells(autorow(j), 13) = "---------战斗结束--------"
             Exit For
         End If
-
     End If
 Next
 End Sub
-'攻击流程
-Function atkloop(a(), d())
+'日志输出检定
+Function log(comboi As Variant, Optional dizzy As Variant) As Variant
 
+    If comboi = 1 And dizzy = 0 Then
+        log = "<攻击>"
+    ElseIf comboi = 1 And dizzy > 0 Then
+        log = "<攻击><击晕>"
+    ElseIf comboi > 1 And dizzy > 0 Then
+        log = "<第" & comboi - 1 & "连击><击晕>"
+    Else
+        log = "<第" & comboi - 1 & "连击>"
+    End If
 End Function
 '死亡检定
 Function isdeath(hp As Variant) As Boolean
@@ -198,11 +217,18 @@ Function isdizzy(a As Variant) As Boolean
     End If
 End Function
 '连击检定
-Function iscombo(atk As Variant, def As Variant) As Boolean
+Function iscombo(atk As Variant, def As Variant, i As Variant) As Variant
+
+    Dim a As Variant
+    Dim d As Variant
+    a = atk
+    d = def
+    Dim j As Integer '连击计数器
     If attribution(atk, def) = True Then
-        iscombo = True
+        j = i + 1 '记录连击次数
+        iscombo = iscombo(a / 2, d / 2, j)
     Else
-        iscombo = False
+        iscombo = i
     End If
 End Function
 '反击检定
